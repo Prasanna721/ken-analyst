@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(python3:*)",
+      "Bash(api/.env)",
+      "Bash(curl:*)",
+      "Bash(mv:*)",
+      "Bash(tree:*)",
+      "Bash(cd:*)",
+      "Bash(cd /Users/prasanna/Documents/New\\ Idea/ken-analyst/api && .venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --reload:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill -9)",
+      "Bash(.venv/bin/pip install:*)",
+      "Bash(cd /Users/prasanna/Documents/New\\ Idea/ken-analyst/api && timeout 10 .venv/bin/python -c \"from main import app; print('Server imports successful')\":*)",
+      "Bash(.venv/bin/python:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
