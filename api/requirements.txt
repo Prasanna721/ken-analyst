@@ -6,3 +6,4 @@ sec-edgar-downloader
 sqlalchemy
 alembic
 python-multipart
+landingai-ade

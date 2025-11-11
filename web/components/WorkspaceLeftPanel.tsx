@@ -75,20 +75,34 @@ export default function WorkspaceLeftPanel({
     setPdfUrl(null);
 
     try {
-      const blob = await downloadDocument(doc.id);
-      const filename = doc.file_path.split("/").pop() || "";
-      const ext = filename.split(".").pop()?.toLowerCase();
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/documents/${doc.id}/download`, {
+        headers: {
+          ...(process.env.NEXT_PUBLIC_HASHED_API_SECRET ? { "Authorization": `Bearer ${process.env.NEXT_PUBLIC_HASHED_API_SECRET}` } : {})
+        }
+      });
 
-      if (ext === "pdf") {
+      if (!response.ok) {
+        throw new Error(`Failed to load document: ${response.statusText}`);
+      }
+
+      const contentType = response.headers.get("content-type");
+
+      // Check if it's a parsed JSON document
+      if (contentType?.includes("application/json")) {
+        const jsonData = await response.json();
+        // Extract markdown from content.markdown field
+        const markdown = jsonData.content?.markdown || JSON.stringify(jsonData, null, 2);
+        setFileType("text");
+        setDocumentContent(markdown);
+      } else if (contentType?.includes("application/pdf")) {
+        const blob = await response.blob();
         setFileType("pdf");
         const url = URL.createObjectURL(blob);
         setPdfUrl(url);
-      } else if (ext === "txt" || !ext || ext === "text") {
-        setFileType("text");
-        const text = await blob.text();
-        setDocumentContent(text);
       } else {
-        setLoadError("Unsupported file type. Only PDF and text files are supported.");
+        const text = await response.text();
+        setFileType("text");
+        setDocumentContent(text);
       }
 
       setLoading(false);

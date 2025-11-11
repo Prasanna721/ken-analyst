@@ -37,6 +37,9 @@ def download_document(
 ):
     """Serve document file for viewing (not downloading)"""
     try:
+        from services import parsed_documents_service
+        import json
+
         document = documents_service.get_document_by_id(db, document_id)
         if not document:
             raise HTTPException(
@@ -44,6 +47,25 @@ def download_document(
                 detail=f"Document with ID '{document_id}' not found"
             )
 
+        # Check if there's a parsed document
+        parsed_docs = parsed_documents_service.get_parsed_documents_by_document(db, document_id)
+        if parsed_docs and len(parsed_docs) > 0:
+            parsed_doc = parsed_docs[0]
+            if parsed_doc.status and os.path.exists(parsed_doc.filepath):
+                # Return parsed JSON content
+                with open(parsed_doc.filepath, 'r') as f:
+                    json_content = json.load(f)
+
+                return Response(
+                    content=json.dumps(json_content),
+                    media_type='application/json',
+                    headers={
+                        'Content-Disposition': 'inline',
+                        'Cache-Control': 'no-cache'
+                    }
+                )
+
+        # Fall back to original document
         file_path = document.file_path
         if not os.path.exists(file_path):
             raise HTTPException(

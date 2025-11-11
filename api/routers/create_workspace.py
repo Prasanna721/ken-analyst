@@ -1,13 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from database import get_db
-from models import WorkspaceCreate, DocumentCreate, ActivityCreate, APIResponse
-from services import workspace_service, documents_service, activity_service
+from models import WorkspaceCreate, DocumentCreate, ActivityCreate, ParsedDocumentCreate, APIResponse
+from services import workspace_service, documents_service, activity_service, parsed_documents_service
 from services.filings_service import download_filings, extract_dates
 import os
 import shutil
 import zipfile
+import json
+from pathlib import Path
 from typing import Optional
+from landingai_ade import LandingAIADE
 
 router = APIRouter(tags=["workspace"])
 
@@ -35,6 +38,80 @@ def extract_zip(zip_path: str, extract_dir: str):
     """Extract zip file to directory"""
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(extract_dir)
+
+def parse_document_with_landingai(file_path: str, workspace_id: str, document_id: str, db: Session):
+    """Parse document using LandingAI and save as JSON"""
+    try:
+        # Log parsing start
+        activity_data = ActivityCreate(
+            workspace_id=workspace_id,
+            category="sub",
+            status=200,
+            title="Document Parsing",
+            message=f"Started parsing {os.path.basename(file_path)}"
+        )
+        activity_service.create_activity(db, activity_data)
+
+        # Initialize LandingAI client
+        api_key = os.environ.get("LANDING_API_KEY")
+        if not api_key:
+            print(f"Warning: LANDING_API_KEY not found, skipping parse for {file_path}")
+            return None
+
+        client = LandingAIADE(
+            apikey=api_key,
+            environment="eu"
+        )
+
+        # Parse the document
+        response = client.parse(
+            document=Path(file_path),
+            model="dpt-2-latest"
+        )
+
+        # Save response as JSON
+        json_filename = os.path.splitext(file_path)[0] + ".json"
+        with open(json_filename, 'w') as f:
+            json.dump(response, f, indent=2)
+
+        # Create parsed document entry with status=False initially
+        parsed_doc_data = ParsedDocumentCreate(
+            workspace_id=workspace_id,
+            documents_id=document_id,
+            filepath=json_filename,
+            status=False
+        )
+        parsed_doc = parsed_documents_service.create_parsed_document(db, parsed_doc_data)
+
+        # Update status to True (done parsing)
+        from models import ParsedDocumentUpdate
+        update_data = ParsedDocumentUpdate(status=True)
+        parsed_documents_service.update_parsed_document(db, parsed_doc.id, update_data)
+
+        # Log parsing completion
+        activity_data = ActivityCreate(
+            workspace_id=workspace_id,
+            category="sub",
+            status=200,
+            title="Document Parsing",
+            message=f"Completed parsing {os.path.basename(file_path)}"
+        )
+        activity_service.create_activity(db, activity_data)
+
+        return parsed_doc.to_dict()
+
+    except Exception as e:
+        print(f"Error parsing document {file_path}: {str(e)}")
+        # Log parsing error
+        activity_data = ActivityCreate(
+            workspace_id=workspace_id,
+            category="sub",
+            status=500,
+            title="Document Parsing",
+            message=f"Failed parsing {os.path.basename(file_path)}: {str(e)}"
+        )
+        activity_service.create_activity(db, activity_data)
+        return None
 
 def process_filings_for_workspace(ticker: str, workspace_id: str, form_type: str, db: Session):
     """Download filings and add to workspace"""
@@ -206,6 +283,17 @@ async def create_workspace_endpoint(
             # Download and process 10-K filings
             docs_10k = process_filings_for_workspace(ticker, created_workspace_id, "10-K", db)
             result["documents"].extend(docs_10k)
+
+        # Step 4: Parse all documents using LandingAI
+        for doc in result["documents"]:
+            try:
+                doc_id = doc.get("id")
+                doc_file_path = doc.get("file_path")
+                if doc_id and doc_file_path and os.path.exists(doc_file_path):
+                    parse_document_with_landingai(doc_file_path, created_workspace_id, doc_id, db)
+            except Exception as e:
+                print(f"Error parsing document {doc.get('file_path')}: {str(e)}")
+                continue
 
         return APIResponse(
             status=201,
