@@ -74,17 +74,19 @@ def parse_document_with_landingai(
             print(f"Warning: LANDING_API_KEY not found, skipping parse for {file_path}")
             return None
 
-        # client = LandingAIADE(
-        #     apikey=api_key,
-        # )
+        client = LandingAIADE(
+            apikey=api_key,
+        )
 
-        # # Parse the document
-        # response = client.parse(document=Path(file_path), model="dpt-2-latest")
+        # Parse the document
+        response = client.parse(document=Path(file_path), model="dpt-2-latest")
 
-        # # Save response as JSON
+        # Save response as JSON
         json_filename = os.path.splitext(file_path)[0] + ".json"
-        # with open(json_filename, "w") as f:
-        #     json.dump(response.to_json())
+        with open(json_filename, "w") as f:
+            json.dump(response.to_json())
+
+        pdfdata = response.to_dict()
 
         # Create parsed document entry with status=False initially
         parsed_doc_data = ParsedDocumentCreate(

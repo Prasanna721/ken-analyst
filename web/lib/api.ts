@@ -88,3 +88,7 @@ export async function downloadDocument(documentId: string): Promise<Blob> {
 
   return response.blob();
 }
+
+export async function getActivities(workspaceId: string) {
+  return apiRequest(`/data/activity?workspace_id=${encodeURIComponent(workspaceId)}`);
+}

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from database import get_db
 from models import ActivityCreate, ActivityUpdate, APIResponse
@@ -7,10 +7,16 @@ from services import activity_service
 router = APIRouter(prefix="/data/activity", tags=["activity"])
 
 @router.get("", response_model=APIResponse)
-def get_activities(db: Session = Depends(get_db)):
-    """Get all activities"""
+def get_activities(
+    workspace_id: str = Query(None, description="Filter by workspace ID"),
+    db: Session = Depends(get_db)
+):
+    """Get all activities, optionally filtered by workspace_id"""
     try:
-        activities = activity_service.get_all_activities(db)
+        if workspace_id:
+            activities = activity_service.get_activities_by_workspace(db, workspace_id)
+        else:
+            activities = activity_service.get_all_activities(db)
         return APIResponse(
             status=200,
             response=[activity.to_dict() for activity in activities]

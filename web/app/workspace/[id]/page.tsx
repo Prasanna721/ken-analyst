@@ -107,7 +107,7 @@ export default function WorkspacePage() {
               documents={documents}
             />
           }
-          rightPanel={<WorkspaceRightPanel />}
+          rightPanel={<WorkspaceRightPanel workspaceId={workspace?.id || null} />}
           defaultLeftWidth={35}
         />
       </div>

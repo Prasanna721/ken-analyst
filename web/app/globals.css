@@ -74,3 +74,12 @@ body {
 .prose ol {
   @apply list-decimal;
 }
+
+/* Clickable chunk sections */
+.prose.cursor-pointer > * {
+  @apply transition-colors;
+}
+
+.prose.cursor-pointer > *:hover {
+  @apply bg-golden-light;
+}

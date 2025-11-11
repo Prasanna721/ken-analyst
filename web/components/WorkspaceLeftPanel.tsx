@@ -43,6 +43,7 @@ export default function WorkspaceLeftPanel({
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [documentContent, setDocumentContent] = useState<string | null>(null);
+  const [documentChunks, setDocumentChunks] = useState<any[] | null>(null);
   const [fileType, setFileType] = useState<"pdf" | "text" | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -92,8 +93,10 @@ export default function WorkspaceLeftPanel({
         const jsonData = await response.json();
         // Extract markdown from the JSON response
         const markdown = jsonData.markdown || JSON.stringify(jsonData, null, 2);
+        const chunks = jsonData.chunks || null;
         setFileType("text");
         setDocumentContent(markdown);
+        setDocumentChunks(chunks);
       } else if (contentType?.includes("application/pdf")) {
         const blob = await response.blob();
         setFileType("pdf");
@@ -116,6 +119,7 @@ export default function WorkspaceLeftPanel({
     setViewMode("grid");
     setSelectedDocument(null);
     setDocumentContent(null);
+    setDocumentChunks(null);
     setFileType(null);
     if (pdfUrl) {
       URL.revokeObjectURL(pdfUrl);
@@ -198,7 +202,7 @@ export default function WorkspaceLeftPanel({
               title="PDF Viewer"
             />
           ) : fileType === "text" && documentContent ? (
-            <TextViewer content={documentContent} />
+            <TextViewer content={documentContent} chunks={documentChunks} />
           ) : null}
         </div>
       </div>
@@ -303,16 +307,73 @@ export default function WorkspaceLeftPanel({
   );
 }
 
-function TextViewer({ content }: { content: string }) {
+function TextViewer({ content, chunks }: { content: string; chunks?: any[] | null }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const isHTML = content.trim().startsWith("<") || content.includes("<table") || content.includes("<a id=");
+
+  useEffect(() => {
+    if (!chunks || !isHTML || !containerRef.current) return;
+
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+
+      // Find the nearest preceding anchor tag with an ID
+      let element: Node | null = target;
+      let foundAnchorId: string | null = null;
+
+      // Walk up and backwards through the DOM to find the nearest <a id="">
+      while (element && element !== containerRef.current) {
+        // Check previous siblings
+        let sibling = element.previousSibling;
+        while (sibling) {
+          if (sibling.nodeType === Node.ELEMENT_NODE) {
+            const siblingElement = sibling as HTMLElement;
+
+            // Check if this sibling is an anchor with an id
+            if (siblingElement.tagName === 'A' && siblingElement.id) {
+              foundAnchorId = siblingElement.id;
+              break;
+            }
+
+            // Check if any descendant anchor has an id (search in reverse)
+            const anchors = Array.from(siblingElement.querySelectorAll('a[id]')).reverse();
+            if (anchors.length > 0) {
+              foundAnchorId = (anchors[0] as HTMLElement).id;
+              break;
+            }
+          }
+
+          if (foundAnchorId) break;
+          sibling = sibling.previousSibling;
+        }
+
+        if (foundAnchorId) break;
+        element = element.parentNode;
+      }
+
+      // If we found an anchor ID, find the corresponding chunk
+      if (foundAnchorId) {
+        const chunk = chunks.find((c) => c.id === foundAnchorId);
+        if (chunk) {
+          console.log('Clicked chunk:', chunk);
+        }
+      }
+    };
+
+    const container = containerRef.current;
+    container.addEventListener('click', handleClick);
+
+    return () => {
+      container.removeEventListener('click', handleClick);
+    };
+  }, [chunks, isHTML]);
 
   if (isHTML) {
     return (
       <div ref={containerRef} className="h-full overflow-auto bg-background-primary">
         <div
-          className="text-sm text-text-primary p-6 prose prose-sm max-w-none"
+          className="text-sm text-text-primary p-6 prose prose-sm max-w-none cursor-pointer"
           dangerouslySetInnerHTML={{ __html: content }}
           style={{
             lineHeight: "1.6",
