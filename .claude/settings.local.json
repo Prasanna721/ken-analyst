@@ -13,7 +13,12 @@
       "Bash(xargs kill -9)",
       "Bash(.venv/bin/pip install:*)",
       "Bash(cd /Users/prasanna/Documents/New\\ Idea/ken-analyst/api && timeout 10 .venv/bin/python -c \"from main import app; print('Server imports successful')\":*)",
-      "Bash(.venv/bin/python:*)"
+      "Bash(.venv/bin/python:*)",
+      "Bash(npx create-next-app@latest:*)",
+      "Bash(npm install)",
+      "Bash(npm install -D autoprefixer)",
+      "Bash(npm run build:*)",
+      "Bash(cd /Users/prasanna/Documents/New\\ Idea/ken-analyst/web && npm install zustand:*)"
     ],
     "deny": [],
     "ask": []

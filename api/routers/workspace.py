@@ -21,6 +21,28 @@ def get_workspaces(db: Session = Depends(get_db)):
             detail=str(e)
         )
 
+@router.get("/{workspace_id}", response_model=APIResponse)
+def get_workspace(workspace_id: str, db: Session = Depends(get_db)):
+    """Get workspace by ID"""
+    try:
+        workspace = workspace_service.get_workspace_by_id(db, workspace_id)
+        if not workspace:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Workspace with ID '{workspace_id}' not found"
+            )
+        return APIResponse(
+            status=200,
+            response=workspace.to_dict()
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
 @router.post("", response_model=APIResponse, status_code=status.HTTP_201_CREATED)
 def create_workspace(
     workspace_data: WorkspaceCreate,
