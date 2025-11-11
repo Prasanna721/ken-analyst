@@ -23,7 +23,8 @@ def create_parsed_document(db: Session, parsed_document_data: ParsedDocumentCrea
     parsed_document = ParsedDocument(
         workspace_id=parsed_document_data.workspace_id,
         documents_id=parsed_document_data.documents_id,
-        filepath=parsed_document_data.filepath
+        filepath=parsed_document_data.filepath,
+        status=parsed_document_data.status if parsed_document_data.status is not None else False
     )
     db.add(parsed_document)
     db.commit()
@@ -43,6 +44,8 @@ def update_parsed_document(db: Session, parsed_document_id: str, parsed_document
         parsed_document.documents_id = parsed_document_data.documents_id
     if parsed_document_data.filepath is not None:
         parsed_document.filepath = parsed_document_data.filepath
+    if parsed_document_data.status is not None:
+        parsed_document.status = parsed_document_data.status
 
     db.commit()
     db.refresh(parsed_document)

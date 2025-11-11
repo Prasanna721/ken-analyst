@@ -1,6 +1,6 @@
 from typing import Any, Optional
 from pydantic import BaseModel
-from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Enum
+from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Enum, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -86,6 +86,7 @@ class ParsedDocument(Base):
     workspace_id = Column(String(8), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
     documents_id = Column(String(12), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
     filepath = Column(String, nullable=False)
+    status = Column(Boolean, default=False, nullable=False)
 
     # Relationships
     workspace = relationship("Workspace", back_populates="parsed_documents")
@@ -97,7 +98,8 @@ class ParsedDocument(Base):
             "id": self.id,
             "workspace_id": self.workspace_id,
             "documents_id": self.documents_id,
-            "filepath": self.filepath
+            "filepath": self.filepath,
+            "status": self.status
         }
 
 class Activity(Base):
@@ -156,11 +158,13 @@ class ParsedDocumentCreate(BaseModel):
     workspace_id: str
     documents_id: str
     filepath: str
+    status: Optional[bool] = False
 
 class ParsedDocumentUpdate(BaseModel):
     workspace_id: Optional[str] = None
     documents_id: Optional[str] = None
     filepath: Optional[str] = None
+    status: Optional[bool] = None
 
 class ActivityCreate(BaseModel):
     workspace_id: str

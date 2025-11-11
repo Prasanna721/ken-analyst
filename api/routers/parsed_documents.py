@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from database import get_db
 from models import ParsedDocumentCreate, ParsedDocumentUpdate, APIResponse
@@ -7,10 +7,20 @@ from services import parsed_documents_service
 router = APIRouter(prefix="/data/parsed_documents", tags=["parsed_documents"])
 
 @router.get("", response_model=APIResponse)
-def get_parsed_documents(db: Session = Depends(get_db)):
-    """Get all parsed documents"""
+def get_parsed_documents(
+    workspace_id: str = Query(None, description="Filter by workspace ID"),
+    document_id: str = Query(None, description="Filter by document ID"),
+    db: Session = Depends(get_db)
+):
+    """Get all parsed documents, optionally filtered by workspace_id or document_id"""
     try:
-        parsed_documents = parsed_documents_service.get_all_parsed_documents(db)
+        if workspace_id:
+            parsed_documents = parsed_documents_service.get_parsed_documents_by_workspace(db, workspace_id)
+        elif document_id:
+            parsed_documents = parsed_documents_service.get_parsed_documents_by_document(db, document_id)
+        else:
+            parsed_documents = parsed_documents_service.get_all_parsed_documents(db)
+
         return APIResponse(
             status=200,
             response=[parsed_doc.to_dict() for parsed_doc in parsed_documents]
