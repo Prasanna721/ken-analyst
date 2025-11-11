@@ -25,6 +25,7 @@ export default function ResizablePanels({
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging || !containerRef.current) return;
 
+      e.preventDefault();
       const containerRect = containerRef.current.getBoundingClientRect();
       const newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
 
@@ -35,14 +36,17 @@ export default function ResizablePanels({
 
     const handleMouseUp = () => {
       setIsDragging(false);
+      document.body.style.userSelect = "";
     };
 
     if (isDragging) {
+      document.body.style.userSelect = "none";
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
     }
 
     return () => {
+      document.body.style.userSelect = "";
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };

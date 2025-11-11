@@ -26,6 +26,10 @@ class DocTypeEnum(str, enum.Enum):
     TEN_K = "10_K"
     OTHER = "other"
 
+class ActivityCategory(str, enum.Enum):
+    MAIN = "main"
+    SUB = "sub"
+
 class Workspace(Base):
     __tablename__ = "workspaces"
 
@@ -37,6 +41,7 @@ class Workspace(Base):
     # Relationships with cascade delete
     documents = relationship("Document", back_populates="workspace", cascade="all, delete-orphan")
     parsed_documents = relationship("ParsedDocument", back_populates="workspace", cascade="all, delete-orphan")
+    activities = relationship("Activity", back_populates="workspace", cascade="all, delete-orphan")
 
     def to_dict(self):
         """Convert model to dictionary"""
@@ -95,6 +100,32 @@ class ParsedDocument(Base):
             "filepath": self.filepath
         }
 
+class Activity(Base):
+    __tablename__ = "activity"
+
+    id = Column(String(12), primary_key=True, default=generate_id)
+    workspace_id = Column(String(8), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
+    category = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    status = Column(Integer, nullable=False)
+    title = Column(String, nullable=False)
+    message = Column(String, nullable=False)
+
+    # Relationships
+    workspace = relationship("Workspace", back_populates="activities")
+
+    def to_dict(self):
+        """Convert model to dictionary"""
+        return {
+            "id": self.id,
+            "workspace_id": self.workspace_id,
+            "category": self.category,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "status": self.status,
+            "title": self.title,
+            "message": self.message
+        }
+
 # Pydantic models for API
 class WorkspaceCreate(BaseModel):
     id: Optional[str] = None
@@ -130,3 +161,17 @@ class ParsedDocumentUpdate(BaseModel):
     workspace_id: Optional[str] = None
     documents_id: Optional[str] = None
     filepath: Optional[str] = None
+
+class ActivityCreate(BaseModel):
+    workspace_id: str
+    category: str
+    status: int
+    title: str
+    message: str
+
+class ActivityUpdate(BaseModel):
+    workspace_id: Optional[str] = None
+    category: Optional[str] = None
+    status: Optional[int] = None
+    title: Optional[str] = None
+    message: Optional[str] = None
