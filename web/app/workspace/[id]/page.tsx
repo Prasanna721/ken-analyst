@@ -2,12 +2,28 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
-import Layout from "@/components/Layout";
 import { useWorkspaceStore } from "@/store/workspaceStore";
-import { createWorkspace } from "@/lib/api";
+import { createWorkspace, getWorkspaceById, getDocuments } from "@/lib/api";
 import ResizablePanels from "@/components/ResizablePanels";
 import WorkspaceLeftPanel from "@/components/WorkspaceLeftPanel";
 import WorkspaceRightPanel from "@/components/WorkspaceRightPanel";
+
+interface Document {
+  id: string;
+  workspace_id: string;
+  doc_type: string;
+  file_path: string;
+  filing_date: string | null;
+  reporting_date: string | null;
+  doc_id: string | null;
+}
+
+interface Workspace {
+  id: string;
+  name: string;
+  ticker: string;
+  created_at: string;
+}
 
 export default function WorkspacePage() {
   const params = useParams();
@@ -17,56 +33,84 @@ export default function WorkspacePage() {
 
   const [status, setStatus] = useState<"idle" | "creating" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
-  const [workspaceData, setWorkspaceData] = useState<any>(null);
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const hasInitialized = useRef(false);
 
   useEffect(() => {
     if (hasInitialized.current) return;
+    hasInitialized.current = true;
 
     const pendingData = getPendingWorkspace(workspaceId);
 
-    if (!pendingData) {
-      setStatus("error");
-      setError("No workspace data found");
-      return;
+    if (pendingData) {
+      setStatus("creating");
+      initializeNewWorkspace(pendingData);
+    } else {
+      loadExistingWorkspace();
     }
-
-    hasInitialized.current = true;
-    setStatus("creating");
-
-    const initializeWorkspace = async () => {
-      try {
-        const result = await createWorkspace(
-          pendingData.workspaceId,
-          pendingData.ticker,
-          pendingData.file
-        );
-
-        setWorkspaceData(result.response);
-        setStatus("success");
-        removePendingWorkspace(workspaceId);
-      } catch (err: any) {
-        setStatus("error");
-        setError(err.message || "Failed to create workspace");
-      }
-    };
-
-    initializeWorkspace();
   }, [workspaceId, getPendingWorkspace, removePendingWorkspace]);
 
+  const initializeNewWorkspace = async (pendingData: any) => {
+    try {
+      const result = await createWorkspace(
+        pendingData.workspaceId,
+        pendingData.ticker,
+        pendingData.file
+      );
+
+      setWorkspace(result.response.workspace);
+      setDocuments(result.response.documents || []);
+      setStatus("success");
+      removePendingWorkspace(workspaceId);
+    } catch (err: any) {
+      setStatus("error");
+      setError(err.message || "Failed to create workspace");
+    }
+  };
+
+  const loadExistingWorkspace = async () => {
+    try {
+      setStatus("creating");
+      const workspaceData = await getWorkspaceById(workspaceId);
+
+      if (!workspaceData.response) {
+        setStatus("error");
+        setError("Workspace not found");
+        return;
+      }
+
+      setWorkspace(workspaceData.response);
+
+      const documentsData = await getDocuments(workspaceId);
+      setDocuments(documentsData.response || []);
+      setStatus("success");
+    } catch (err: any) {
+      setStatus("error");
+      setError(err.message || "Failed to load workspace");
+    }
+  };
+
   return (
-    <Layout>
-      <ResizablePanels
-        leftPanel={
-          <WorkspaceLeftPanel
-            status={status}
-            error={error}
-            workspaceData={workspaceData}
-          />
-        }
-        rightPanel={<WorkspaceRightPanel />}
-        defaultLeftWidth={50}
-      />
-    </Layout>
+    <div className="h-screen flex flex-col overflow-hidden relative">
+      <h1 className="font-heading font-medium text-6xl absolute top-8 right-8 text-text-secondary opacity-30 z-0 pointer-events-none">
+        Ken
+      </h1>
+
+      <div className="flex-1 overflow-hidden relative z-10">
+        <ResizablePanels
+          leftPanel={
+            <WorkspaceLeftPanel
+              status={status}
+              error={error}
+              workspace={workspace}
+              documents={documents}
+            />
+          }
+          rightPanel={<WorkspaceRightPanel />}
+          defaultLeftWidth={35}
+        />
+      </div>
+    </div>
   );
 }

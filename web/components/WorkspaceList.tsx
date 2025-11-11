@@ -51,7 +51,7 @@ export default function WorkspaceList() {
           {workspaces.map((workspace) => (
             <div
               key={workspace.id}
-              onClick={() => router.push(`/workplace/${workspace.id}`)}
+              onClick={() => router.push(`/workspace/${workspace.id}`)}
               className="p-4 border border-border hover:bg-golden-light transition-colors cursor-pointer"
             >
               <div className="font-medium text-text-primary">{workspace.name}</div>
