@@ -35,6 +35,7 @@ export default function WorkspacePage() {
   const [error, setError] = useState<string | null>(null);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [selectedChunk, setSelectedChunk] = useState<any | null>(null);
   const hasInitialized = useRef(false);
 
   useEffect(() => {
@@ -105,9 +106,16 @@ export default function WorkspacePage() {
               error={error}
               workspace={workspace}
               documents={documents}
+              onChunkSelect={setSelectedChunk}
             />
           }
-          rightPanel={<WorkspaceRightPanel workspaceId={workspace?.id || null} />}
+          rightPanel={
+            <WorkspaceRightPanel
+              workspaceId={workspace?.id || null}
+              selectedChunk={selectedChunk}
+              onCloseChunk={() => setSelectedChunk(null)}
+            />
+          }
           defaultLeftWidth={35}
         />
       </div>

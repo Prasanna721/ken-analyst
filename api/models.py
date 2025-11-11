@@ -42,6 +42,7 @@ class Workspace(Base):
     documents = relationship("Document", back_populates="workspace", cascade="all, delete-orphan")
     parsed_documents = relationship("ParsedDocument", back_populates="workspace", cascade="all, delete-orphan")
     activities = relationship("Activity", back_populates="workspace", cascade="all, delete-orphan")
+    agents = relationship("Agent", back_populates="workspace", cascade="all, delete-orphan")
 
     def to_dict(self):
         """Convert model to dictionary"""
@@ -128,6 +129,53 @@ class Activity(Base):
             "message": self.message
         }
 
+class Agent(Base):
+    __tablename__ = "agents"
+
+    id = Column(String(12), primary_key=True, default=generate_id)
+    workspace_id = Column(String(8), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="active")  # active, inactive, completed
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    workspace = relationship("Workspace", back_populates="agents")
+    messages = relationship("AgentMessage", back_populates="agent", cascade="all, delete-orphan")
+
+    def to_dict(self):
+        """Convert model to dictionary"""
+        return {
+            "id": self.id,
+            "workspace_id": self.workspace_id,
+            "name": self.name,
+            "status": self.status,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }
+
+class AgentMessage(Base):
+    __tablename__ = "agent_messages"
+
+    id = Column(String(12), primary_key=True, default=generate_id)
+    agent_id = Column(String(12), ForeignKey("agents.id", ondelete="CASCADE"), nullable=False)
+    role = Column(String, nullable=False)  # user, assistant, system
+    message = Column(String, nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    agent = relationship("Agent", back_populates="messages")
+
+    def to_dict(self):
+        """Convert model to dictionary"""
+        return {
+            "id": self.id,
+            "agent_id": self.agent_id,
+            "role": self.role,
+            "message": self.message,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None
+        }
+
 # Pydantic models for API
 class WorkspaceCreate(BaseModel):
     id: Optional[str] = None
@@ -178,4 +226,22 @@ class ActivityUpdate(BaseModel):
     category: Optional[str] = None
     status: Optional[int] = None
     title: Optional[str] = None
+    message: Optional[str] = None
+
+class AgentCreate(BaseModel):
+    workspace_id: str
+    name: str
+    status: Optional[str] = "active"
+
+class AgentUpdate(BaseModel):
+    name: Optional[str] = None
+    status: Optional[str] = None
+
+class AgentMessageCreate(BaseModel):
+    agent_id: str
+    role: str
+    message: str
+
+class AgentMessageUpdate(BaseModel):
+    role: Optional[str] = None
     message: Optional[str] = None

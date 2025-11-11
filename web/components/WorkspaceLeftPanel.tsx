@@ -26,6 +26,7 @@ interface WorkspaceLeftPanelProps {
   error: string | null;
   workspace: Workspace | null;
   documents: Document[];
+  onChunkSelect?: (chunk: any) => void;
 }
 
 type TabType = "finder" | "ai-agents";
@@ -37,6 +38,7 @@ export default function WorkspaceLeftPanel({
   error,
   workspace,
   documents,
+  onChunkSelect,
 }: WorkspaceLeftPanelProps) {
   const [activeTab, setActiveTab] = useState<TabType>("finder");
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
@@ -113,6 +115,10 @@ export default function WorkspaceLeftPanel({
       setLoadError(err.message || "Failed to load document");
       setLoading(false);
     }
+  };
+
+  const handleChunkClick = (chunk: any) => {
+    onChunkSelect?.(chunk);
   };
 
   const handleBackToGrid = () => {
@@ -202,7 +208,11 @@ export default function WorkspaceLeftPanel({
               title="PDF Viewer"
             />
           ) : fileType === "text" && documentContent ? (
-            <TextViewer content={documentContent} chunks={documentChunks} />
+            <TextViewer
+              content={documentContent}
+              chunks={documentChunks}
+              onChunkClick={handleChunkClick}
+            />
           ) : null}
         </div>
       </div>
@@ -307,13 +317,13 @@ export default function WorkspaceLeftPanel({
   );
 }
 
-function TextViewer({ content, chunks }: { content: string; chunks?: any[] | null }) {
+function TextViewer({ content, chunks, onChunkClick }: { content: string; chunks?: any[] | null; onChunkClick?: (chunk: any) => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const isHTML = content.trim().startsWith("<") || content.includes("<table") || content.includes("<a id=");
 
   useEffect(() => {
-    if (!chunks || !isHTML || !containerRef.current) return;
+    if (!chunks || !isHTML || !containerRef.current || !onChunkClick) return;
 
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -357,6 +367,7 @@ function TextViewer({ content, chunks }: { content: string; chunks?: any[] | nul
         const chunk = chunks.find((c) => c.id === foundAnchorId);
         if (chunk) {
           console.log('Clicked chunk:', chunk);
+          onChunkClick(chunk);
         }
       }
     };
@@ -367,7 +378,7 @@ function TextViewer({ content, chunks }: { content: string; chunks?: any[] | nul
     return () => {
       container.removeEventListener('click', handleClick);
     };
-  }, [chunks, isHTML]);
+  }, [chunks, isHTML, onChunkClick]);
 
   if (isHTML) {
     return (

@@ -7,3 +7,5 @@ sqlalchemy
 alembic
 python-multipart
 landingai-ade
+claude-agent-sdk
+anyio

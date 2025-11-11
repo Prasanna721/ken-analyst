@@ -83,3 +83,44 @@ body {
 .prose.cursor-pointer > *:hover {
   @apply bg-golden-light;
 }
+
+/* Excel-like table styling for chunk content */
+.chunk-content table {
+  @apply w-full border-collapse my-4;
+  border: 1px solid #d4d4d4;
+}
+
+.chunk-content table th,
+.chunk-content table td {
+  border: 1px solid #d4d4d4;
+  @apply px-4 py-2 text-left;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.chunk-content table th {
+  @apply bg-background-secondary font-semibold text-text-primary;
+  border-bottom: 2px solid #a3a3a3;
+}
+
+.chunk-content table tbody tr:nth-child(even) {
+  background-color: #fafaf9;
+}
+
+.chunk-content table tbody tr:nth-child(odd) {
+  @apply bg-white;
+}
+
+.chunk-content table tbody tr:hover {
+  background-color: #f5f5f4;
+}
+
+.chunk-content table td {
+  @apply text-text-primary;
+  white-space: nowrap;
+}
+
+/* Make tables scrollable horizontally if too wide */
+.chunk-content {
+  overflow-x: auto;
+}

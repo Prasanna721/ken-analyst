@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getActivities } from "@/lib/api";
+import ChunkDetailPanel from "./ChunkDetailPanel";
 
 interface Activity {
   id: string;
@@ -15,9 +16,11 @@ interface Activity {
 
 interface WorkspaceRightPanelProps {
   workspaceId: string | null;
+  selectedChunk?: any | null;
+  onCloseChunk?: () => void;
 }
 
-export default function WorkspaceRightPanel({ workspaceId }: WorkspaceRightPanelProps) {
+export default function WorkspaceRightPanel({ workspaceId, selectedChunk, onCloseChunk }: WorkspaceRightPanelProps) {
   const [showActivity, setShowActivity] = useState(false);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(false);
@@ -59,6 +62,18 @@ export default function WorkspaceRightPanel({ workspaceId }: WorkspaceRightPanel
     });
   };
 
+  // Show chunk detail panel if a chunk is selected
+  if (selectedChunk && workspaceId) {
+    return (
+      <ChunkDetailPanel
+        chunk={selectedChunk}
+        workspaceId={workspaceId}
+        onClose={onCloseChunk || (() => {})}
+      />
+    );
+  }
+
+  // Otherwise show activity panel
   return (
     <div className="h-full flex flex-col">
       <div className="flex-1"></div>
