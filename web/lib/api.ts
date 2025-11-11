@@ -16,7 +16,7 @@ async function apiRequest<T = any>(
     ...(options.headers as Record<string, string>),
   };
 
-  if (API_SECRET && !endpoint.startsWith("/create_workspace") && !endpoint.startsWith("/search")) {
+  if (API_SECRET && !endpoint.startsWith("/create_workspace")) {
     headers["Authorization"] = `Bearer ${API_SECRET}`;
   }
 
@@ -37,7 +37,7 @@ async function apiRequest<T = any>(
 }
 
 export async function searchCompanies(query: string, signal?: AbortSignal) {
-  return apiRequest(`/search?q=${encodeURIComponent(query)}`, { signal });
+  return apiRequest(`/search_listed?query=${encodeURIComponent(query)}`, { signal });
 }
 
 export async function getWorkspaces() {
