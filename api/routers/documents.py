@@ -1,10 +1,31 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from database import get_db
 from models import DocumentCreate, DocumentUpdate, APIResponse
 from services import documents_service
+from typing import Optional
 
 router = APIRouter(prefix="/data/documents", tags=["documents"])
+
+documents_router = APIRouter(prefix="/documents", tags=["documents"])
+
+@documents_router.get("", response_model=APIResponse)
+def get_documents_by_workspace_id(
+    workspace_id: str = Query(..., description="Workspace ID to filter documents"),
+    db: Session = Depends(get_db)
+):
+    """Get all documents for a specific workspace"""
+    try:
+        documents = documents_service.get_documents_by_workspace(db, workspace_id)
+        return APIResponse(
+            status=200,
+            response=[document.to_dict() for document in documents]
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 @router.get("", response_model=APIResponse)
 def get_documents(db: Session = Depends(get_db)):
