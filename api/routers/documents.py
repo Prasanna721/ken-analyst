@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session
 from database import get_db
 from models import DocumentCreate, DocumentUpdate, APIResponse
 from services import documents_service
 from typing import Optional
 import os
+import mimetypes
 
 router = APIRouter(prefix="/data/documents", tags=["documents"])
 
@@ -34,7 +35,7 @@ def download_document(
     document_id: str,
     db: Session = Depends(get_db)
 ):
-    """Download document file by document ID"""
+    """Serve document file for viewing (not downloading)"""
     try:
         document = documents_service.get_document_by_id(db, document_id)
         if not document:
@@ -50,11 +51,31 @@ def download_document(
                 detail=f"File not found at path: {file_path}"
             )
 
+        # Read file content
+        with open(file_path, 'rb') as f:
+            content = f.read()
+
+        # Determine content type
         filename = os.path.basename(file_path)
-        return FileResponse(
-            path=file_path,
-            filename=filename,
-            media_type="application/octet-stream"
+        ext = os.path.splitext(filename)[1].lower()
+
+        if ext == '.pdf':
+            media_type = 'application/pdf'
+        elif ext == '.txt':
+            media_type = 'text/plain; charset=utf-8'
+        else:
+            # Try to guess from mimetypes
+            guessed_type = mimetypes.guess_type(filename)[0]
+            media_type = guessed_type if guessed_type else 'text/plain'
+
+        # Return file content with proper headers for inline display
+        return Response(
+            content=content,
+            media_type=media_type,
+            headers={
+                'Content-Disposition': f'inline; filename="{filename}"',
+                'Cache-Control': 'no-cache'
+            }
         )
     except HTTPException:
         raise
