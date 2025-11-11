@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getWorkspaces } from "@/lib/api";
 
 interface Workspace {
@@ -11,6 +12,7 @@ interface Workspace {
 }
 
 export default function WorkspaceList() {
+  const router = useRouter();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -49,6 +51,7 @@ export default function WorkspaceList() {
           {workspaces.map((workspace) => (
             <div
               key={workspace.id}
+              onClick={() => router.push(`/workplace/${workspace.id}`)}
               className="p-4 border border-border hover:bg-golden-light transition-colors cursor-pointer"
             >
               <div className="font-medium text-text-primary">{workspace.name}</div>
