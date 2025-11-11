@@ -6,7 +6,7 @@ import { useWorkspaceStore } from "@/store/workspaceStore";
 import { createWorkspace, getWorkspaceById, getDocuments } from "@/lib/api";
 import ResizablePanels from "@/components/ResizablePanels";
 import WorkspaceLeftPanel from "@/components/WorkspaceLeftPanel";
-import WorkspaceRightPanel from "@/components/WorkspaceRightPanel";
+import DocumentViewer from "@/components/DocumentViewer";
 
 interface Document {
   id: string;
@@ -35,6 +35,7 @@ export default function WorkspacePage() {
   const [error, setError] = useState<string | null>(null);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const hasInitialized = useRef(false);
 
   useEffect(() => {
@@ -105,9 +106,15 @@ export default function WorkspacePage() {
               error={error}
               workspace={workspace}
               documents={documents}
+              onDocumentSelect={setSelectedDocument}
             />
           }
-          rightPanel={<WorkspaceRightPanel />}
+          rightPanel={
+            <DocumentViewer
+              document={selectedDocument}
+              onClose={() => setSelectedDocument(null)}
+            />
+          }
           defaultLeftWidth={35}
         />
       </div>

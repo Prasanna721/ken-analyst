@@ -25,6 +25,7 @@ interface WorkspaceLeftPanelProps {
   error: string | null;
   workspace: Workspace | null;
   documents: Document[];
+  onDocumentSelect?: (document: Document) => void;
 }
 
 type TabType = "finder" | "ai-agents";
@@ -35,6 +36,7 @@ export default function WorkspaceLeftPanel({
   error,
   workspace,
   documents,
+  onDocumentSelect,
 }: WorkspaceLeftPanelProps) {
   const [activeTab, setActiveTab] = useState<TabType>("finder");
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
@@ -147,6 +149,7 @@ export default function WorkspaceLeftPanel({
                   return (
                     <div
                       key={doc.id}
+                      onDoubleClick={() => onDocumentSelect?.(doc)}
                       className="flex flex-col items-center p-3 hover:bg-golden-light transition-colors cursor-pointer border border-transparent hover:border-border"
                     >
                       <div className="text-4xl mb-2">{getFileIcon(fileName)}</div>
