@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from database import get_db
 from models import DocumentCreate, DocumentUpdate, APIResponse
 from services import documents_service
 from typing import Optional
+import os
 
 router = APIRouter(prefix="/data/documents", tags=["documents"])
 
@@ -21,6 +23,41 @@ def get_documents_by_workspace_id(
             status=200,
             response=[document.to_dict() for document in documents]
         )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+@documents_router.get("/{document_id}/download")
+def download_document(
+    document_id: str,
+    db: Session = Depends(get_db)
+):
+    """Download document file by document ID"""
+    try:
+        document = documents_service.get_document_by_id(db, document_id)
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Document with ID '{document_id}' not found"
+            )
+
+        file_path = document.file_path
+        if not os.path.exists(file_path):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"File not found at path: {file_path}"
+            )
+
+        filename = os.path.basename(file_path)
+        return FileResponse(
+            path=file_path,
+            filename=filename,
+            media_type="application/octet-stream"
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

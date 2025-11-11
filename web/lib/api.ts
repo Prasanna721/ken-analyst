@@ -71,3 +71,20 @@ export async function createWorkspace(
 export async function getDocuments(workspaceId: string) {
   return apiRequest(`/documents?workspace_id=${encodeURIComponent(workspaceId)}`);
 }
+
+export async function downloadDocument(documentId: string): Promise<Blob> {
+  const url = `${API_URL}/documents/${documentId}/download`;
+
+  const headers: HeadersInit = {};
+  if (API_SECRET) {
+    headers["Authorization"] = `Bearer ${API_SECRET}`;
+  }
+
+  const response = await fetch(url, { headers });
+
+  if (!response.ok) {
+    throw new Error(`Failed to download document: ${response.statusText}`);
+  }
+
+  return response.blob();
+}
