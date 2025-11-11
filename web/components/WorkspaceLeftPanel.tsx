@@ -119,7 +119,7 @@ export default function WorkspaceLeftPanel({
                 onClick={() => setActiveFilter(btn.value)}
                 className={`px-4 py-2 text-sm font-medium transition-colors ${
                   activeFilter === btn.value
-                    ? "bg-golden text-text-primary"
+                    ? "bg-golden-light text-text-primary"
                     : "bg-background-secondary text-text-secondary hover:bg-golden-light"
                 }`}
               >

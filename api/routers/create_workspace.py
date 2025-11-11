@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from database import get_db
-from models import WorkspaceCreate, DocumentCreate, APIResponse
-from services import workspace_service, documents_service
+from models import WorkspaceCreate, DocumentCreate, ActivityCreate, APIResponse
+from services import workspace_service, documents_service, activity_service
 from services.filings_service import download_filings, extract_dates
 import os
 import shutil
@@ -87,6 +87,16 @@ def process_filings_for_workspace(ticker: str, workspace_id: str, form_type: str
                     document = documents_service.create_document(db, doc_data)
                     documents_added.append(document.to_dict())
 
+                    # Log download activity
+                    activity_data = ActivityCreate(
+                        workspace_id=workspace_id,
+                        category="sub",
+                        status=200,
+                        title="Filing Downloaded",
+                        message=f"{filing_dir} downloaded"
+                    )
+                    activity_service.create_activity(db, activity_data)
+
     # Cleanup temp directory
     if os.path.exists(temp_base_path):
         shutil.rmtree(temp_base_path)
@@ -117,6 +127,16 @@ async def create_workspace_endpoint(
         workspace = workspace_service.create_workspace(db, workspace_data)
         created_workspace_id = workspace.id
 
+        # Log main activity
+        activity_data = ActivityCreate(
+            workspace_id=created_workspace_id,
+            category="main",
+            status=200,
+            title="Workspace Creation",
+            message="Creating workspace"
+        )
+        activity_service.create_activity(db, activity_data)
+
         workspace_folder = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
             "data",
@@ -144,6 +164,16 @@ async def create_workspace_endpoint(
                 extract_dir = os.path.join(temp_dir, "extracted")
                 os.makedirs(extract_dir, exist_ok=True)
                 extract_zip(file_path, extract_dir)
+
+                # Log unzip activity
+                activity_data = ActivityCreate(
+                    workspace_id=created_workspace_id,
+                    category="sub",
+                    status=200,
+                    title="File Processing",
+                    message=f"Unzipped {file.filename}"
+                )
+                activity_service.create_activity(db, activity_data)
 
                 # Flatten and copy all files
                 files_copied = flatten_and_copy_files(extract_dir, workspace_folder)
