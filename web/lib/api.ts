@@ -12,8 +12,8 @@ async function apiRequest<T = any>(
 ): Promise<APIResponse<T>> {
   const url = `${API_URL}${endpoint}`;
 
-  const headers: HeadersInit = {
-    ...options.headers,
+  const headers: Record<string, string> = {
+    ...(options.headers as Record<string, string>),
   };
 
   if (API_SECRET && !endpoint.startsWith("/create_workspace") && !endpoint.startsWith("/search")) {
@@ -75,7 +75,7 @@ export async function getDocuments(workspaceId: string) {
 export async function downloadDocument(documentId: string): Promise<Blob> {
   const url = `${API_URL}/documents/${documentId}/download`;
 
-  const headers: HeadersInit = {};
+  const headers: Record<string, string> = {};
   if (API_SECRET) {
     headers["Authorization"] = `Bearer ${API_SECRET}`;
   }

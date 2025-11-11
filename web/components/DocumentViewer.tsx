@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { downloadDocument } from "@/lib/api";
 
 interface Document {
@@ -154,55 +154,29 @@ function PDFViewer({ pdfUrl }: { pdfUrl: string }) {
 }
 
 function TextViewer({ content }: { content: string }) {
-  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 5000 });
   const containerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
 
-  const lines = content.split("\n");
-  const totalHeight = lines.length * 20;
-  const bufferSize = 2000;
+  const isHTML = content.trim().startsWith("<") || content.includes("<table") || content.includes("<a id=");
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      const scrollTop = container.scrollTop;
-      const viewportHeight = container.clientHeight;
-
-      const startLine = Math.max(0, Math.floor(scrollTop / 20) - 100);
-      const endLine = Math.min(lines.length, Math.ceil((scrollTop + viewportHeight) / 20) + 100);
-
-      const startChar = lines.slice(0, startLine).reduce((acc, line) => acc + line.length + 1, 0);
-      const endChar = lines.slice(0, endLine).reduce((acc, line) => acc + line.length + 1, 0);
-
-      setVisibleRange({ start: startChar, end: endChar });
-    };
-
-    container.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
-
-    return () => {
-      container.removeEventListener("scroll", handleScroll);
-    };
-  }, [lines]);
-
-  const visibleContent = content.substring(visibleRange.start, visibleRange.end);
-  const topPadding = visibleRange.start > 0 ? Math.floor(content.substring(0, visibleRange.start).split("\n").length * 20) : 0;
-  const bottomPadding = Math.max(0, totalHeight - topPadding - (visibleContent.split("\n").length * 20));
+  if (isHTML) {
+    return (
+      <div ref={containerRef} className="h-full overflow-auto bg-background-primary">
+        <div
+          className="text-sm text-text-primary p-6 prose prose-sm max-w-none"
+          dangerouslySetInnerHTML={{ __html: content }}
+          style={{
+            lineHeight: "1.6",
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div ref={containerRef} className="h-full overflow-auto bg-background-primary">
-      <div style={{ height: `${totalHeight}px`, position: "relative" }}>
-        <div style={{ height: `${topPadding}px` }} />
-        <pre
-          ref={contentRef}
-          className="text-sm text-text-primary p-6 font-mono whitespace-pre-wrap break-words"
-        >
-          {visibleContent}
-        </pre>
-        <div style={{ height: `${bottomPadding}px` }} />
-      </div>
+      <pre className="text-sm text-text-primary p-6 font-mono whitespace-pre-wrap break-words">
+        {content}
+      </pre>
     </div>
   );
 }

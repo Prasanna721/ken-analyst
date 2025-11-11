@@ -5,3 +5,72 @@
 body {
   @apply font-sans antialiased bg-background-primary text-text-primary;
 }
+
+/* Styles for rendered HTML content */
+.prose {
+  @apply text-text-primary;
+}
+
+.prose table {
+  @apply w-full border-collapse border border-border my-4;
+}
+
+.prose table th,
+.prose table td {
+  @apply border border-border px-3 py-2 text-left;
+}
+
+.prose table th {
+  @apply bg-background-secondary font-medium;
+}
+
+.prose table tr:hover {
+  @apply bg-golden-light;
+}
+
+.prose p {
+  @apply my-3;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  @apply font-heading font-medium mt-6 mb-3;
+}
+
+.prose h1 {
+  @apply text-2xl;
+}
+
+.prose h2 {
+  @apply text-xl;
+}
+
+.prose h3 {
+  @apply text-lg;
+}
+
+.prose a {
+  @apply text-golden hover:underline;
+}
+
+.prose strong,
+.prose b {
+  @apply font-bold;
+}
+
+.prose ul,
+.prose ol {
+  @apply my-3 pl-6;
+}
+
+.prose ul {
+  @apply list-disc;
+}
+
+.prose ol {
+  @apply list-decimal;
+}

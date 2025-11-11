@@ -1,8 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from database import get_db
-from models import WorkspaceCreate, DocumentCreate, ActivityCreate, ParsedDocumentCreate, APIResponse
-from services import workspace_service, documents_service, activity_service, parsed_documents_service
+from models import (
+    WorkspaceCreate,
+    DocumentCreate,
+    ActivityCreate,
+    ParsedDocumentCreate,
+    APIResponse,
+)
+from services import (
+    workspace_service,
+    documents_service,
+    activity_service,
+    parsed_documents_service,
+)
 from services.filings_service import download_filings, extract_dates
 import os
 import shutil
@@ -13,6 +24,7 @@ from typing import Optional
 from landingai_ade import LandingAIADE
 
 router = APIRouter(tags=["workspace"])
+
 
 def flatten_and_copy_files(source_dir: str, dest_dir: str):
     """Recursively flatten directory structure and copy all files to dest_dir"""
@@ -34,12 +46,16 @@ def flatten_and_copy_files(source_dir: str, dest_dir: str):
 
     return files_copied
 
+
 def extract_zip(zip_path: str, extract_dir: str):
     """Extract zip file to directory"""
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+    with zipfile.ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extractall(extract_dir)
 
-def parse_document_with_landingai(file_path: str, workspace_id: str, document_id: str, db: Session):
+
+def parse_document_with_landingai(
+    file_path: str, workspace_id: str, document_id: str, db: Session
+):
     """Parse document using LandingAI and save as JSON"""
     try:
         # Log parsing start
@@ -48,7 +64,7 @@ def parse_document_with_landingai(file_path: str, workspace_id: str, document_id
             category="sub",
             status=200,
             title="Document Parsing",
-            message=f"Started parsing {os.path.basename(file_path)}"
+            message=f"Started parsing {os.path.basename(file_path)}",
         )
         activity_service.create_activity(db, activity_data)
 
@@ -58,33 +74,32 @@ def parse_document_with_landingai(file_path: str, workspace_id: str, document_id
             print(f"Warning: LANDING_API_KEY not found, skipping parse for {file_path}")
             return None
 
-        client = LandingAIADE(
-            apikey=api_key,
-            environment="eu"
-        )
+        # client = LandingAIADE(
+        #     apikey=api_key,
+        # )
 
-        # Parse the document
-        response = client.parse(
-            document=Path(file_path),
-            model="dpt-2-latest"
-        )
+        # # Parse the document
+        # response = client.parse(document=Path(file_path), model="dpt-2-latest")
 
-        # Save response as JSON
+        # # Save response as JSON
         json_filename = os.path.splitext(file_path)[0] + ".json"
-        with open(json_filename, 'w') as f:
-            json.dump(response, f, indent=2)
+        # with open(json_filename, "w") as f:
+        #     json.dump(response.to_json())
 
         # Create parsed document entry with status=False initially
         parsed_doc_data = ParsedDocumentCreate(
             workspace_id=workspace_id,
             documents_id=document_id,
             filepath=json_filename,
-            status=False
+            status=False,
         )
-        parsed_doc = parsed_documents_service.create_parsed_document(db, parsed_doc_data)
+        parsed_doc = parsed_documents_service.create_parsed_document(
+            db, parsed_doc_data
+        )
 
         # Update status to True (done parsing)
         from models import ParsedDocumentUpdate
+
         update_data = ParsedDocumentUpdate(status=True)
         parsed_documents_service.update_parsed_document(db, parsed_doc.id, update_data)
 
@@ -94,7 +109,7 @@ def parse_document_with_landingai(file_path: str, workspace_id: str, document_id
             category="sub",
             status=200,
             title="Document Parsing",
-            message=f"Completed parsing {os.path.basename(file_path)}"
+            message=f"Completed parsing {os.path.basename(file_path)}",
         )
         activity_service.create_activity(db, activity_data)
 
@@ -108,20 +123,26 @@ def parse_document_with_landingai(file_path: str, workspace_id: str, document_id
             category="sub",
             status=500,
             title="Document Parsing",
-            message=f"Failed parsing {os.path.basename(file_path)}: {str(e)}"
+            message=f"Failed parsing {os.path.basename(file_path)}: {str(e)}",
         )
         activity_service.create_activity(db, activity_data)
         return None
 
-def process_filings_for_workspace(ticker: str, workspace_id: str, form_type: str, db: Session):
+
+def process_filings_for_workspace(
+    ticker: str, workspace_id: str, form_type: str, db: Session
+):
     """Download filings and add to workspace"""
     ticker = ticker.upper()
 
     # Download filings to temp location
-    temp_base_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", f"temp_{ticker}")
+    temp_base_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "data", f"temp_{ticker}"
+    )
     os.makedirs(temp_base_path, exist_ok=True)
 
     from sec_edgar_downloader import Downloader
+
     dl = Downloader("CompanyName", "email@example.com", temp_base_path)
 
     # Download based on form type
@@ -130,8 +151,12 @@ def process_filings_for_workspace(ticker: str, workspace_id: str, form_type: str
     else:
         dl.get("10-Q", ticker, after="2015-01-01")
 
-    temp_form_folder = os.path.join(temp_base_path, "sec-edgar-filings", ticker, form_type)
-    workspace_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", workspace_id)
+    temp_form_folder = os.path.join(
+        temp_base_path, "sec-edgar-filings", ticker, form_type
+    )
+    workspace_folder = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "data", workspace_id
+    )
 
     documents_added = []
 
@@ -145,21 +170,34 @@ def process_filings_for_workspace(ticker: str, workspace_id: str, form_type: str
                     filing_date, reporting_date = extract_dates(full_submission)
 
                     # Copy file to workspace
-                    dest_file = os.path.join(workspace_folder, f"{form_type}_{filing_dir}_full-submission.txt")
+                    dest_file = os.path.join(
+                        workspace_folder,
+                        f"{form_type}_{filing_dir}_full-submission.txt",
+                    )
                     shutil.copy2(full_submission, dest_file)
 
                     # Format dates to YYYY/MM/DD
-                    filing_date_formatted = f"{filing_date[:4]}/{filing_date[4:6]}/{filing_date[6:]}" if filing_date else None
-                    reporting_date_formatted = f"{reporting_date[:4]}/{reporting_date[4:6]}/{reporting_date[6:]}" if reporting_date else None
+                    filing_date_formatted = (
+                        f"{filing_date[:4]}/{filing_date[4:6]}/{filing_date[6:]}"
+                        if filing_date
+                        else None
+                    )
+                    reporting_date_formatted = (
+                        f"{reporting_date[:4]}/{reporting_date[4:6]}/{reporting_date[6:]}"
+                        if reporting_date
+                        else None
+                    )
 
                     # Add to documents table
                     doc_data = DocumentCreate(
                         workspace_id=workspace_id,
-                        doc_type=form_type.replace("-", "_"),  # 10-Q -> 10_Q, 10-K -> 10_K
+                        doc_type=form_type.replace(
+                            "-", "_"
+                        ),  # 10-Q -> 10_Q, 10-K -> 10_K
                         file_path=dest_file,
                         filing_date=filing_date_formatted,
                         reporting_date=reporting_date_formatted,
-                        doc_id=filing_dir
+                        doc_id=filing_dir,
                     )
                     document = documents_service.create_document(db, doc_data)
                     documents_added.append(document.to_dict())
@@ -170,7 +208,7 @@ def process_filings_for_workspace(ticker: str, workspace_id: str, form_type: str
                         category="sub",
                         status=200,
                         title="Filing Downloaded",
-                        message=f"{filing_dir} downloaded"
+                        message=f"{filing_dir} downloaded",
                     )
                     activity_service.create_activity(db, activity_data)
 
@@ -180,12 +218,13 @@ def process_filings_for_workspace(ticker: str, workspace_id: str, form_type: str
 
     return documents_added
 
+
 @router.post("/create_workspace", response_model=APIResponse)
 async def create_workspace_endpoint(
     workspace_id: Optional[str] = Form(None),
     ticker: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Create workspace with optional file upload and/or ticker-based filings
@@ -199,7 +238,7 @@ async def create_workspace_endpoint(
         workspace_data = WorkspaceCreate(
             id=workspace_id,
             name=None,  # Will be auto-generated
-            ticker=ticker or "UNKNOWN"
+            ticker=ticker or "UNKNOWN",
         )
         workspace = workspace_service.create_workspace(db, workspace_data)
         created_workspace_id = workspace.id
@@ -210,20 +249,15 @@ async def create_workspace_endpoint(
             category="main",
             status=200,
             title="Workspace Creation",
-            message="Creating workspace"
+            message="Creating workspace",
         )
         activity_service.create_activity(db, activity_data)
 
         workspace_folder = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)),
-            "data",
-            created_workspace_id
+            os.path.dirname(os.path.dirname(__file__)), "data", created_workspace_id
         )
 
-        result = {
-            "workspace": workspace.to_dict(),
-            "documents": []
-        }
+        result = {"workspace": workspace.to_dict(), "documents": []}
 
         # Step 2: Handle file upload if present
         if file:
@@ -236,7 +270,7 @@ async def create_workspace_endpoint(
                 shutil.copyfileobj(file.file, buffer)
 
             # Check if it's a zip file
-            if file.filename.endswith('.zip'):
+            if file.filename.endswith(".zip"):
                 # Extract zip
                 extract_dir = os.path.join(temp_dir, "extracted")
                 os.makedirs(extract_dir, exist_ok=True)
@@ -248,7 +282,7 @@ async def create_workspace_endpoint(
                     category="sub",
                     status=200,
                     title="File Processing",
-                    message=f"Unzipped {file.filename}"
+                    message=f"Unzipped {file.filename}",
                 )
                 activity_service.create_activity(db, activity_data)
 
@@ -265,7 +299,7 @@ async def create_workspace_endpoint(
                 doc_data = DocumentCreate(
                     workspace_id=created_workspace_id,
                     doc_type="other",
-                    file_path=file_path
+                    file_path=file_path,
                 )
                 document = documents_service.create_document(db, doc_data)
                 result["documents"].append(document.to_dict())
@@ -277,11 +311,15 @@ async def create_workspace_endpoint(
         # Step 3: Handle ticker-based filings if present
         if ticker:
             # Download and process 10-Q filings
-            docs_10q = process_filings_for_workspace(ticker, created_workspace_id, "10-Q", db)
+            docs_10q = process_filings_for_workspace(
+                ticker, created_workspace_id, "10-Q", db
+            )
             result["documents"].extend(docs_10q)
 
             # Download and process 10-K filings
-            docs_10k = process_filings_for_workspace(ticker, created_workspace_id, "10-K", db)
+            docs_10k = process_filings_for_workspace(
+                ticker, created_workspace_id, "10-K", db
+            )
             result["documents"].extend(docs_10k)
 
         # Step 4: Parse all documents using LandingAI
@@ -290,23 +328,18 @@ async def create_workspace_endpoint(
                 doc_id = doc.get("id")
                 doc_file_path = doc.get("file_path")
                 if doc_id and doc_file_path and os.path.exists(doc_file_path):
-                    parse_document_with_landingai(doc_file_path, created_workspace_id, doc_id, db)
+                    parse_document_with_landingai(
+                        doc_file_path, created_workspace_id, doc_id, db
+                    )
             except Exception as e:
                 print(f"Error parsing document {doc.get('file_path')}: {str(e)}")
                 continue
 
-        return APIResponse(
-            status=201,
-            response=result
-        )
+        return APIResponse(status=201, response=result)
 
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
